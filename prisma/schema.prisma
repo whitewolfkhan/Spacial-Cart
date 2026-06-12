@@ -1,0 +1,34 @@
+// SpatialCart catalog schema.
+// Dimensions are flat Float columns (metres) so they're individually queryable
+// (e.g. "fits a 2m wall") — see README.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Prisma 7: the connection URL lives in prisma.config.ts (CLI/migrate) and
+  // is provided to PrismaClient via a driver adapter at runtime.
+  provider = "postgresql"
+}
+
+model Product {
+  id          String   @id
+  name        String
+  description String
+  /// Price in cents (integers avoid floating-point money bugs).
+  priceCents  Int
+  /// True real-world dimensions in metres, used for true-to-scale AR.
+  length      Float
+  width       Float
+  height      Float
+  /// Path/URL to the .glb model (served from /public now; a CDN later).
+  modelUrl    String
+  /// Hex accent shown on the storefront card.
+  accent      String   @default("#6d5efc")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}
