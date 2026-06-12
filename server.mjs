@@ -6,6 +6,8 @@ import { Server as SocketIOServer } from "socket.io";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT ?? 3000);
+// Bind to all interfaces so cloud hosts (Render, etc.) can route to us.
+const hostname = process.env.HOST ?? "0.0.0.0";
 
 // Event names (mirrors src/lib/realtime-types.ts EV).
 const EV = {
@@ -102,6 +104,7 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(port, () => {
-  console.log(`> Ready on http://localhost:${port} (Next + Socket.io)`);
+httpServer.listen(port, hostname, () => {
+  const shown = hostname === "0.0.0.0" ? "localhost" : hostname;
+  console.log(`> Ready on http://${shown}:${port} (Next + Socket.io)`);
 });

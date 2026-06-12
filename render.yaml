@@ -1,0 +1,39 @@
+# Render Blueprint for SpatialCart.
+# A single web service running the custom Node server (Next.js + Socket.io).
+# Postgres is external (Neon/Supabase) — set DATABASE_URL in the dashboard.
+#
+# Deploy: push to GitHub, then in Render: New > Blueprint, pick this repo.
+services:
+  - type: web
+    name: spatialcart
+    runtime: node
+    plan: free
+    # Build: install, generate client, apply migrations, seed (idempotent),
+    # then build Next.
+    buildCommand: npm install && npm run db:deploy && npm run db:seed && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Required — set in the Render dashboard (Neon/Supabase connection string).
+      - key: DATABASE_URL
+        sync: false
+      # Admin auth — set real values in the dashboard.
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      # Optional: Cloudflare R2 (falls back to /public/models if unset).
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      # Optional: real Stripe (falls back to mock checkout if unset).
+      - key: STRIPE_SECRET_KEY
+        sync: false
