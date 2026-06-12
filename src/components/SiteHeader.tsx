@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCartDetails } from "@/store/cart";
+import Logo from "./Logo";
 
 export default function SiteHeader() {
   const { count } = useCartDetails();
@@ -10,8 +11,8 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0c0c12]/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand text-sm">
-            ◧
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand/15 text-brand">
+            <Logo size={22} />
           </span>
           SpatialCart
         </Link>
