@@ -40,6 +40,26 @@ function getRoom(roomId) {
   return rooms.get(roomId);
 }
 
+// In production (cloud), ensure the DB schema exists and is seeded before we
+// start serving — runs regardless of how the host configured the build step.
+// Idempotent: migrate deploy + upsert seed are safe to run on every boot.
+async function ensureDatabase() {
+  if (dev || !process.env.DATABASE_URL) return;
+  const { execSync } = await import("node:child_process");
+  try {
+    console.log("> Applying database migrations…");
+    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+    console.log("> Seeding catalog…");
+    execSync("npx prisma db seed", { stdio: "inherit" });
+  } catch (err) {
+    // Don't crash the server if migrate/seed fails — log and continue so the
+    // app still boots (e.g. DB already migrated by a prior deploy).
+    console.error("> DB setup step failed (continuing):", err?.message ?? err);
+  }
+}
+
+await ensureDatabase();
+
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
