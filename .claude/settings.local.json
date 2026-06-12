@@ -4,7 +4,8 @@
       "Bash(npm --version)",
       "Bash(npx --version)",
       "Bash(npm install *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(npm run *)"
     ]
   }
 }

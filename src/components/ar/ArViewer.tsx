@@ -7,6 +7,7 @@ import { Vector3 } from "three";
 import type { Product } from "@/data/products";
 import { formatPrice } from "@/data/products";
 import { useCart } from "@/store/cart";
+import { useSession } from "@/store/session";
 import ArScene from "./ArScene";
 import type { FitVerdict } from "./fit-geometry";
 
@@ -84,13 +85,38 @@ export default function ArViewer({ product }: Props) {
     store.enterAR();
   }, [store]);
 
+  const sendPlacement = useSession((s) => s.sendPlacement);
+  const inRoom = useSession((s) => s.roomId !== null);
+
+  const broadcastPlacement = useCallback(
+    (pos: Vector3, rot: number, scl: number) => {
+      sendPlacement({
+        productId: product.id,
+        width: product.width,
+        position: { x: pos.x, y: pos.y, z: pos.z },
+        rotationY: rot,
+        scale: scl,
+      });
+    },
+    [sendPlacement, product.id, product.width],
+  );
+
   const place = useCallback(() => {
     const pos = placerRef.current?.();
     if (pos) {
       setPlacedPosition(pos);
       setPlaced(true);
+      broadcastPlacement(pos, rotationY, userScale);
     }
-  }, []);
+  }, [broadcastPlacement, rotationY, userScale]);
+
+  // Re-broadcast whenever the placed model is rotated/scaled, so peers see the
+  // live transform in their ghost.
+  useEffect(() => {
+    if (placed && placedPosition && inRoom) {
+      broadcastPlacement(placedPosition, rotationY, userScale);
+    }
+  }, [rotationY, userScale, placed, placedPosition, inRoom, broadcastPlacement]);
 
   const reset = useCallback(() => {
     setPlaced(false);

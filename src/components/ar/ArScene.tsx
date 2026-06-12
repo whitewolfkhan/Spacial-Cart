@@ -4,11 +4,15 @@ import { useRef, useState } from "react";
 import { useXRHitTest, XROrigin } from "@react-three/xr";
 import { OrbitControls, Center, ContactShadows } from "@react-three/drei";
 import { Group, Matrix4, Vector3 } from "three";
+import { useFrame, useThree } from "@react-three/fiber";
 import type { Product } from "@/data/products";
 import FurnitureModel from "./FurnitureModel";
 import Reticle from "./Reticle";
 import FitGuard from "./FitGuard";
 import type { FitVerdict } from "./fit-geometry";
+import GhostModel from "./GhostModel";
+import PeerCursors from "./PeerCursors";
+import { useSession } from "@/store/session";
 
 type Props = {
   product: Product;
@@ -41,6 +45,57 @@ function SceneLights() {
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
+    </>
+  );
+}
+
+/**
+ * Throttled broadcaster of the local user's "looked-at" point: a ray from the
+ * camera forward onto the y=0 floor, sent to the room as this user's cursor.
+ */
+function CursorBroadcaster() {
+  const camera = useThree((s) => s.camera);
+  const roomId = useSession((s) => s.roomId);
+  const sendCursor = useSession((s) => s.sendCursor);
+  const last = useRef(0);
+  const dir = useRef(new Vector3());
+  const point = useRef(new Vector3());
+
+  useFrame((_state, _delta, frame) => {
+    if (!roomId) return;
+    const now = performance.now();
+    if (now - last.current < 100) return; // ~10 Hz
+    last.current = now;
+
+    // Camera forward; intersect the y=0 floor plane.
+    camera.getWorldDirection(dir.current);
+    if (Math.abs(dir.current.y) < 1e-4) return;
+    const t = -camera.position.y / dir.current.y;
+    if (t <= 0) return;
+    point.current.copy(camera.position).addScaledVector(dir.current, t);
+    sendCursor({ x: point.current.x, y: 0, z: point.current.z });
+    void frame;
+  });
+
+  return null;
+}
+
+/** Ghost of a peer's placement + their cursors. Shared by AR and desktop. */
+function SharedLayer() {
+  const remote = useSession((s) => s.remotePlacement);
+  return (
+    <>
+      {remote && (
+        <GhostModel
+          productId={remote.productId}
+          width={remote.width}
+          position={[remote.position.x, remote.position.y, remote.position.z]}
+          rotationY={remote.rotationY}
+          scale={remote.scale}
+        />
+      )}
+      <PeerCursors />
+      <CursorBroadcaster />
     </>
   );
 }
@@ -121,6 +176,9 @@ export default function ArScene({
           minPolarAngle={0.2}
           maxPolarAngle={Math.PI / 2}
         />
+        {/* In a shared room, a peer's ghost placement + cursors also show on
+            desktop (useful for testing the sync without two phones). */}
+        <SharedLayer />
       </>
     );
   }
@@ -132,6 +190,9 @@ export default function ArScene({
       <SceneLights />
 
       {!placed && <Reticle ref={reticleRef} />}
+
+      {/* Peer's ghost placement + cursors, and broadcast of our own cursor. */}
+      <SharedLayer />
 
       {placed && placedPosition && (
         <>

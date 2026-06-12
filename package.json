@@ -4,9 +4,9 @@
   "private": true,
   "description": "SpatialCart — view furniture in your space with WebXR AR, then check out from inside AR.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.mjs",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "NODE_ENV=production node server.mjs",
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
@@ -32,6 +32,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "server-only": "^0.0.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "three": "^0.169.0",
     "zustand": "^5.0.1"
   },

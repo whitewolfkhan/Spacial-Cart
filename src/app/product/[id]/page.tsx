@@ -3,6 +3,7 @@ import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import ArViewerClient from "@/components/ar/ArViewerClient";
 import AddToCartButton from "@/components/AddToCartButton";
+import CoopSession from "@/components/CoopSession";
 import { formatPrice } from "@/data/products";
 import { getProductById, getAllProductIds } from "@/lib/products";
 
@@ -48,6 +49,10 @@ export default async function ProductPage({
 
             <div className="mt-6">
               <AddToCartButton product={product} />
+            </div>
+
+            <div className="mt-4">
+              <CoopSession />
             </div>
 
             <p className="mt-4 text-xs text-white/40">

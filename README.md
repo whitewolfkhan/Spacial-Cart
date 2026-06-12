@@ -34,6 +34,9 @@ npm run db:seed        # load the 3 catalog products
 npm run dev            # http://localhost:3000
 ```
 
+> `npm run dev`/`npm start` run a **custom server** (`server.mjs`) that hosts Next.js **and**
+> the Socket.io server for shared AR sessions on the same port. (`next build` is unchanged.)
+
 Generate the placeholder 3D models (already committed under `public/models/`):
 
 ```bash
@@ -88,6 +91,27 @@ and continuously checks it against WebXR-detected planes (`useXRPlanes("floor" |
 
 The desktop orbit preview has no guard. Plane detection only runs in a live AR session, so
 this can't be exercised on desktop; the underlying geometry has unit-test coverage.
+
+### Shared AR sessions (co-op)
+
+Two people can place furniture together in real time over **Socket.io** (hosted by
+`server.mjs` on the same port as Next).
+
+- On a product page, **Create room** generates a 6-char code (or **Join** an existing one).
+  Status + peer presence dots show who's connected (`CoopSession.tsx`, `store/session.ts`).
+- When you place furniture, the placement (productId, width, x/y/z, rotation, scale) is
+  broadcast to the room; rotating/scaling re-broadcasts live.
+- Each peer's placement renders as a semi-transparent tinted **ghost** (`GhostModel.tsx`) at
+  the shared coordinates, and a glowing **cursor** marks where each peer is looking
+  (`PeerCursors.tsx` + a ~10 Hz camera-ray broadcaster). Late joiners receive the current
+  placement immediately.
+- Coordinates are shared **relative to each user's own AR origin** — full real-time sync, but
+  the two rooms aren't physically aligned (true co-location needs shared spatial anchors,
+  out of scope for the demo). The ghost/cursors also render in the desktop preview, which is
+  how the sync is tested without two phones.
+
+The protocol (join, presence, placement, cursor, late-join state) has end-to-end test
+coverage; only the in-AR visual rendering needs real devices.
 
 ## 3D asset compression
 
@@ -187,6 +211,7 @@ config. Copy `.env.example` to `.env.local` to enable real Stripe.
 ## Structure
 
 ```
+server.mjs                 # custom server: Next.js + Socket.io (co-op AR) on one port
 prisma/
   schema.prisma            # Product model (flat dimension columns, metres)
   seed.ts                  # upserts the 3 catalog products
@@ -208,21 +233,26 @@ src/
       Reticle.tsx          # floor-placement ring driven by XR hit-test
       FitGuard.tsx         # "will it fit?" wireframe box + floor/wall plane checks
       fit-geometry.ts      # point-in-polygon, footprint corners, wall distance
+      GhostModel.tsx       # semi-transparent peer placement (co-op sessions)
+      PeerCursors.tsx      # glowing markers where peers are looking
       ArErrorBoundary.tsx  # keeps a WebGL/WebXR failure from crashing the page
+    CoopSession.tsx        # Create/Join shared-room UI
   lib/
     auth.ts                # HMAC admin-token sign/verify (Web Crypto, Edge-safe)
     compress-glb.ts        # gltf-transform dedup + Draco compression (server-only)
     prisma.ts              # PrismaClient singleton (pg driver adapter)
     products.ts            # server-only catalog queries (getAllProducts, …)
     r2.ts                  # server-only R2 client: signed GET URL, upload, delete
+    realtime-types.ts      # shared Socket.io event protocol (server + client)
   data/products.ts         # client-safe Product type, formatPrice, cart snapshot
   store/cart.ts            # Zustand persisted cart
+  store/session.ts         # Zustand + socket.io-client co-op session state
 scripts/generate-models.mjs # writes lightweight placeholder .glb models
 scripts/upload-models.mjs   # uploads public/models/*.glb to R2 (npm run upload:models)
 ```
 
 ## Next steps (toward full SpatialCart)
 
-- Object storage (R2) for `.glb` on a CDN; merchant upload → DB row
-- 3D asset pipeline (gltf-transform compression, LODs, thumbnails)
-- "Will it fit?" AR guard, dynamic light estimation, shared AR sessions, merchant dashboard
+- CDN edge caching in front of R2; LOD generation + thumbnails in the asset pipeline
+- Real Stripe + production deployment
+- AI light estimation (room-adaptive brightness); shared spatial anchors for true co-location
