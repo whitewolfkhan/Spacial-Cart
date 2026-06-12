@@ -7,6 +7,8 @@ import { Group, Matrix4, Vector3 } from "three";
 import type { Product } from "@/data/products";
 import FurnitureModel from "./FurnitureModel";
 import Reticle from "./Reticle";
+import FitGuard from "./FitGuard";
+import type { FitVerdict } from "./fit-geometry";
 
 type Props = {
   product: Product;
@@ -20,6 +22,8 @@ type Props = {
   onReticleReady: (ready: boolean) => void;
   /** Called with the current reticle world position when the user taps "Place". */
   onPlaceRequested: (registerPlacer: () => Vector3 | null) => void;
+  /** Bubble the "will it fit?" verdict up to the DOM overlay. */
+  onFitVerdict: (verdict: FitVerdict) => void;
 };
 
 /**
@@ -50,6 +54,7 @@ export default function ArScene({
   placedPosition,
   onReticleReady,
   onPlaceRequested,
+  onFitVerdict,
 }: Props) {
   const reticleRef = useRef<Group>(null);
   const hitMatrix = useRef(new Matrix4());
@@ -129,18 +134,31 @@ export default function ArScene({
       {!placed && <Reticle ref={reticleRef} />}
 
       {placed && placedPosition && (
-        <group position={[placedPosition.x, placedPosition.y, placedPosition.z]}>
-          {/* Invisible plane that only receives the contact shadow. */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, 0.001, 0]}>
-            <planeGeometry args={[6, 6]} />
-            <shadowMaterial opacity={0.35} />
-          </mesh>
-          <FurnitureModel
-            product={product}
-            userScale={userScale}
+        <>
+          <group position={[placedPosition.x, placedPosition.y, placedPosition.z]}>
+            {/* Invisible plane that only receives the contact shadow. */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, 0.001, 0]}>
+              <planeGeometry args={[6, 6]} />
+              <shadowMaterial opacity={0.35} />
+            </mesh>
+            <FurnitureModel
+              product={product}
+              userScale={userScale}
+              rotationY={rotationY}
+            />
+          </group>
+
+          {/* "Will it fit?" guard: wireframe box sized from the DB dimensions
+              (× userScale), recolored green/red against detected planes. */}
+          <FitGuard
+            width={product.width * userScale}
+            height={product.height * userScale}
+            depth={product.length * userScale}
+            center={placedPosition}
             rotationY={rotationY}
+            onVerdict={onFitVerdict}
           />
-        </group>
+        </>
       )}
     </>
   );

@@ -8,6 +8,7 @@ import type { Product } from "@/data/products";
 import { formatPrice } from "@/data/products";
 import { useCart } from "@/store/cart";
 import ArScene from "./ArScene";
+import type { FitVerdict } from "./fit-geometry";
 
 type Props = { product: Product };
 
@@ -27,6 +28,7 @@ export default function ArViewer({ product }: Props) {
   const [userScale, setUserScale] = useState(1);
   const [rotationY, setRotationY] = useState(0);
   const [added, setAdded] = useState(false);
+  const [fitVerdict, setFitVerdict] = useState<FitVerdict>("unknown");
 
   // A ref to the scene's "read current reticle position" function.
   const placerRef = useRef<(() => Vector3 | null) | null>(null);
@@ -95,6 +97,7 @@ export default function ArViewer({ product }: Props) {
     setPlacedPosition(null);
     setUserScale(1);
     setRotationY(0);
+    setFitVerdict("unknown");
   }, []);
 
   const addToCart = useCallback(() => {
@@ -137,6 +140,7 @@ export default function ArViewer({ product }: Props) {
                 placedPosition={placedPosition}
                 onReticleReady={setReticleReady}
                 onPlaceRequested={registerPlacer}
+                onFitVerdict={setFitVerdict}
               />
             </XR>
           )}
@@ -202,6 +206,21 @@ export default function ArViewer({ product }: Props) {
                 </button>
               ) : (
                 <>
+                  {/* "Will it fit?" verdict banner */}
+                  {fitVerdict !== "unknown" && (
+                    <div
+                      className={`pointer-events-none flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold backdrop-blur ${
+                        fitVerdict === "fits"
+                          ? "bg-emerald-500/25 text-emerald-100 ring-1 ring-emerald-400/40"
+                          : "bg-red-500/25 text-red-100 ring-1 ring-red-400/40"
+                      }`}
+                    >
+                      {fitVerdict === "fits"
+                        ? "✓ Fits perfectly!"
+                        : "⚠ Too close to wall / Might not fit"}
+                    </div>
+                  )}
+
                   <div className="pointer-events-auto flex items-center gap-2 rounded-xl bg-black/55 p-2 backdrop-blur">
                     <button
                       onClick={() => setRotationY((r) => r - Math.PI / 12)}

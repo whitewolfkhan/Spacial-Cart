@@ -72,6 +72,23 @@ WebXR `immersive-ar` needs an AR-capable device (e.g. Android Chrome). Desktop b
 show an orbitable 3D **preview** plus a notice that AR isn't available — the storefront,
 cart, and checkout all work everywhere. To test AR on your phone, serve over HTTPS / LAN.
 
+### "Will it fit?" guard
+
+Once a model is placed in AR, `FitGuard` (`src/components/ar/FitGuard.tsx`) draws a
+**wireframe bounding box** sized from the catalog `length × width × height` (× user scale)
+and continuously checks it against WebXR-detected planes (`useXRPlanes("floor" | "wall")`):
+
+- Every footprint corner must lie within a detected **floor** polygon, and stay at least
+  10 cm from any **wall** plane (point-in-polygon + perpendicular-distance math in
+  `fit-geometry.ts`).
+- **Fits** → green box + "✓ Fits perfectly!"; **too close / overhang** → red box +
+  "⚠ Too close to wall / Might not fit", shown in the AR DOM overlay.
+- If the device reports no planes (many phones lack plane detection), the verdict stays
+  `unknown` and no banner is shown — we never flash a false warning.
+
+The desktop orbit preview has no guard. Plane detection only runs in a live AR session, so
+this can't be exercised on desktop; the underlying geometry has unit-test coverage.
+
 ## 3D asset compression
 
 Uploaded `.glb` files are optimized before they hit storage. `createProduct` writes the
@@ -189,6 +206,8 @@ src/
       ArScene.tsx          # desktop orbit preview + AR hit-test / floor placement
       FurnitureModel.tsx   # fetches model URL from /api/models, rescales to true size
       Reticle.tsx          # floor-placement ring driven by XR hit-test
+      FitGuard.tsx         # "will it fit?" wireframe box + floor/wall plane checks
+      fit-geometry.ts      # point-in-polygon, footprint corners, wall distance
       ArErrorBoundary.tsx  # keeps a WebGL/WebXR failure from crashing the page
   lib/
     auth.ts                # HMAC admin-token sign/verify (Web Crypto, Edge-safe)
