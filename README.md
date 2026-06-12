@@ -251,8 +251,3 @@ scripts/generate-models.mjs # writes lightweight placeholder .glb models
 scripts/upload-models.mjs   # uploads public/models/*.glb to R2 (npm run upload:models)
 ```
 
-## Next steps (toward full SpatialCart)
-
-- CDN edge caching in front of R2; LOD generation + thumbnails in the asset pipeline
-- Real Stripe + production deployment
-- AI light estimation (room-adaptive brightness); shared spatial anchors for true co-location
